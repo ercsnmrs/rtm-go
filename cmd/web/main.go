@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/gob"
-	"github.com/alexedwards/scs/v2"
-	"github.com/pusher/pusher-http-go"
-	"github.com/tsawler/vigilate/pkg/config"
-	"github.com/tsawler/vigilate/pkg/handlers"
-	"github.com/tsawler/vigilate/pkg/models"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/alexedwards/scs/v2"
+	"github.com/ercsnmrs/rtm-go/internal/config"
+	"github.com/ercsnmrs/rtm-go/internal/handlers"
+	"github.com/ercsnmrs/rtm-go/internal/models"
+	"github.com/pusher/pusher-http-go"
 )
 
 var app config.AppConfig
@@ -20,7 +21,7 @@ var session *scs.SessionManager
 var preferenceMap map[string]string
 var wsClient pusher.Client
 
-const vigilateVersion = "1.0.0"
+const rtmGoVersion = "1.0.0"
 const maxWorkerPoolSize = 5
 const maxJobMaxWorkers = 5
 
@@ -43,7 +44,7 @@ func main() {
 
 	// print info
 	log.Printf("******************************************")
-	log.Printf("** %sVigilate%s v%s built in %s", "\033[31m", "\033[0m", vigilateVersion, runtime.Version())
+	log.Printf("** %srtm-go%s v%s built in %s", "\033[31m", "\033[0m", rtmGoVersion, runtime.Version())
 	log.Printf("**----------------------------------------")
 	log.Printf("** Running with %d Processors", runtime.NumCPU())
 	log.Printf("** Running on %s", runtime.GOOS)
@@ -52,7 +53,7 @@ func main() {
 	// create http server
 	srv := &http.Server{
 		Addr:              *insecurePort,
-		Handler:           routes(app),
+		Handler:           routes(),
 		IdleTimeout:       30 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,

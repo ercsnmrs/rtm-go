@@ -1,0 +1,13 @@
+#!/bin/zsh
+
+# This is the bare minimum to run in development. For full list of flags,
+# run ./rtm-go -help
+
+go build -o rtm-go cmd/web/*.go && ./rtm-go \
+-dbuser='someuser' \
+-pusherHost='pusher.com' \
+-pusherKey='abc123' \
+-pusherSecret='123abc' \
+-pusherApp="1" \
+-pusherPort="4001" \
+-pusherSecure=false

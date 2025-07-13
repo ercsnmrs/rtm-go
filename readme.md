@@ -1,50 +1,70 @@
+# RTM-GO
 
-# Vigilate
-
-This is the source code for the second project in the Udemy course Working with Websockets in Go (Golang).
-
-A dead simple monitoring service, intended to replace things like Nagios.
+Sample implementation of Real Time Monitoring Using Websockets
 
 ## Build
 
-Build in the normal way:
+Build in the normal way on Mac/Linux:
 
 ~~~
-go build -o vigilate cmd/web/*.go
+go build -o rtm-go cmd/web/*.go
+~~~
+
+Or on Windows:
+
+~~~
+go build -o rtm-go.exe cmd/web/.
 ~~~
 
 Or for a particular platform:
 
 ~~~
-env GOOS=linux GOARCH=amd64 go build -o vigilate cmd/web/*.go
+env GOOS=linux GOARCH=amd64 go build -o rtm-go cmd/web/*.go
 ~~~
 
 ## Requirements
 
-Vigilate requires:
+rtm-go requires:
 - Postgres 11 or later (db is set up as a repository, so other databases are possible)
 - An account with [Pusher](https://pusher.com/), or a Pusher alternative 
-(like [ipe](https://github.com/dimiro1/ipe))
+(like [ipê](https://github.com/dimiro1/ipe))
 
 ## Run
+
+First, make sure ipê is running (if you're using ipê):
+
+On Mac/Linux
+~~~
+cd ipe
+./ipe 
+~~~
+
+On Windows
+~~~
+cd ipe
+ipe.exe
+~~~
 
 Run with flags:
 
 ~~~
-./vigilate \
+./rtm-go \
 -dbuser='tcs' \
--pusherHost='some.host.com' \
--pusherSecret='somesecret' \
--pusherKey='somekey' 
+-pusherHost='localhost' \
+-pusherPort='4001' \
+-pusherKey='123abc' \
+-pusherSecret='abc123' \
+-pusherApp="1" \
+-pusherSecure=false
 ~~~~
 
 ## All Flags
 
 ~~~~
-tcs@grendel vigilate-udemy % ./vigilate -help
-Usage of ./vigilate:
+./rtm-go -help
+Usage of ./rtm-go:
   -db string
-        database name (default "vigilate")
+        database name (default "rtmsvc")
   -dbhost string
         database host (default "localhost")
   -dbport string
@@ -53,10 +73,12 @@ Usage of ./vigilate:
         database ssl setting (default "disable")
   -dbuser string
         database user
+  -dbpass string
+        database user
   -domain string
         domain name (e.g. example.com) (default "localhost")
   -identifier string
-        unique identifier (default "vigilate")
+        unique identifier (default "rtm-go")
   -port string
         port to listen on (default ":4000")
   -production
@@ -71,17 +93,9 @@ Usage of ./vigilate:
         pusher port (default "443")
   -pusherSecret string
         pusher secret
+   -pusherSecure
+        pusher server uses SSL (true or false)
+
+Sample ./rtm-go -dbhost localhost -dbport 5432 -dbpass pass -dbuser user
+
 ~~~~
-
-
-## Sample supervisor script
-
-~~~
-[program:vigilate]
-command=/var/www/sites/vigilate/vigilate -port=':4000' -domain='example.com' -production=true -dbuser='postgres' -pusherHost='some.pusher.host.com' -pusherSecret='somescret' -pusherKey='somekey'
-directory=/var/www/sites/vigilate
-autostart=true
-autorestart=true
-
-stdout_logfile=/var/www/sites/vigilate/logs/vigilate.log
-~~~

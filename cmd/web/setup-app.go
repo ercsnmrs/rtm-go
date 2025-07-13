@@ -3,38 +3,40 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/alexedwards/scs/postgresstore"
-	"github.com/alexedwards/scs/v2"
-	"github.com/pusher/pusher-http-go"
-	"github.com/tsawler/vigilate/pkg/channeldata"
-	"github.com/tsawler/vigilate/pkg/config"
-	"github.com/tsawler/vigilate/pkg/driver"
-	"github.com/tsawler/vigilate/pkg/handlers"
-	"github.com/tsawler/vigilate/pkg/helpers"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/alexedwards/scs/postgresstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/ercsnmrs/rtm-go/internal/channeldata"
+	"github.com/ercsnmrs/rtm-go/internal/config"
+	"github.com/ercsnmrs/rtm-go/internal/driver"
+	"github.com/ercsnmrs/rtm-go/internal/handlers"
+	"github.com/ercsnmrs/rtm-go/internal/helpers"
+	"github.com/pusher/pusher-http-go"
+	"github.com/robfig/cron/v3"
 )
 
 func setupApp() (*string, error) {
 	// read flags
 	insecurePort := flag.String("port", ":4000", "port to listen on")
-	identifier := flag.String("identifier", "vigilate", "unique identifier")
+	identifier := flag.String("identifier", "rtm-go", "unique identifier")
 	domain := flag.String("domain", "localhost", "domain name (e.g. example.com)")
 	inProduction := flag.Bool("production", false, "application is in production")
 	dbHost := flag.String("dbhost", "localhost", "database host")
 	dbPort := flag.String("dbport", "5432", "database port")
-	dbUser := flag.String("dbuser", "", "database user")
-	dbPass := flag.String("dbpass", "", "database password")
-	databaseName := flag.String("db", "vigilate", "database name")
+	dbUser := flag.String("dbuser", "user", "database user")
+	dbPass := flag.String("dbpass", "password", "database password")
+	databaseName := flag.String("db", "rtmsvc", "database name")
 	dbSsl := flag.String("dbssl", "disable", "database ssl setting")
 	pusherHost := flag.String("pusherHost", "", "pusher host")
 	pusherPort := flag.String("pusherPort", "443", "pusher port")
 	pusherApp := flag.String("pusherApp", "9", "pusher app id")
 	pusherKey := flag.String("pusherKey", "", "pusher key")
 	pusherSecret := flag.String("pusherSecret", "", "pusher secret")
-	pusherSecure := flag.Bool("pusherSecure", false, "pusher server uses SSL")
+	pusherSecure := flag.Bool("pusherSecure", false, "pusher server uses SSL (true or false)")
 
 	flag.Parse()
 
@@ -90,14 +92,14 @@ func setupApp() (*string, error) {
 
 	// define application configuration
 	a := config.AppConfig{
-		DB:            db,
-		Session:       session,
-		InProduction:  *inProduction,
-		Domain:        *domain,
-		PusherSecret:  *pusherSecret,
-		MailQueue:     mailQueue,
-		Version:       vigilateVersion,
-		Identifier:    *identifier,
+		DB:           db,
+		Session:      session,
+		InProduction: *inProduction,
+		Domain:       *domain,
+		PusherSecret: *pusherSecret,
+		MailQueue:    mailQueue,
+		Version:      rtmGoVersion,
+		Identifier:   *identifier,
 	}
 
 	app = a
@@ -120,7 +122,7 @@ func setupApp() (*string, error) {
 	preferenceMap["pusher-port"] = *pusherPort
 	preferenceMap["pusher-key"] = *pusherKey
 	preferenceMap["identifier"] = *identifier
-	preferenceMap["version"] = vigilateVersion
+	preferenceMap["version"] = rtmGoVersion
 
 	app.PreferenceMap = preferenceMap
 
@@ -133,7 +135,26 @@ func setupApp() (*string, error) {
 		Host:   fmt.Sprintf("%s:%s", *pusherHost, *pusherPort),
 	}
 
-	app.WsClient = wsClient
+	log.Println("Host", fmt.Sprintf("%s:%s", *pusherHost, *pusherPort))
+	log.Println("Secure", *pusherSecure)
+
+	app.WsClient = &wsClient
+	monitorMap := make(map[int]cron.EntryID)
+	app.MonitorMap = monitorMap
+
+	localZone, _ := time.LoadLocation("Local")
+	scheduler := cron.New(cron.WithLocation(localZone), cron.WithChain(
+		cron.DelayIfStillRunning(cron.DefaultLogger),
+		cron.Recover(cron.DefaultLogger),
+	))
+
+	app.Scheduler = scheduler
+
+	go handlers.Repo.StartMonitoring()
+
+	if app.PreferenceMap["monitoring_live"] == "1" {
+		app.Scheduler.Start()
+	}
 
 	helpers.NewHelpers(&app)
 
@@ -152,4 +173,3 @@ func createDirIfNotExist(path string) error {
 	}
 	return nil
 }
-
